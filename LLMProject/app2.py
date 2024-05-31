@@ -1,14 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai
 from lecturaArchivos import read_pdf, read_docx, classify_requirements
 from genPDF import generate_pdf
-
+import os
+from flask import send_file
 
 app = Flask(__name__)
-CORS(app)  # Habilita CORS en toda la aplicación
+CORS(app)
 
-genai.configure(api_key="API_KEY")
+genai.configure(api_key="AIzaSyDrgS_nkCcezHkVGD2PeOAet-Ut9fPOuAc")
 model = genai.GenerativeModel('gemini-pro')
 
 @app.route('/')
@@ -19,13 +20,17 @@ def index():
 def generate_questions():
     context = request.json.get('context')
     try:
-        generated_text = generate_text(f"¿Qué tipo de preguntas puedo hacerle a mi cliente para comprender mejor sus necesidades?, en este caso es una entrevista con un cliente para la estraccion de requerimientos, (Tienen que ser preguntas no tan tecnicas, amigables para el cliente) Context: {context}")
+        generated_text = generate_text(f"¿Qué tipo de preguntas puedo hacerle a mi cliente para comprender mejor sus necesidades?, en este caso es una entrevista con un cliente para la extracción de requerimientos, (Tienen que ser preguntas no tan técnicas, amigables para el cliente) Context: {context}")
         questions = generated_text.split('\n')  
         return jsonify({'questions': questions})
     except Exception as e:
-        error_message = f"Error durante la solicitud: {e}"
+        error_message = f"Error during request: {e}"
         return jsonify({'error': error_message}), 500
     
+@app.route('/download/<path:filename>')
+def download_file(filename):
+    return send_from_directory(os.path.join('generated_files'), filename, as_attachment=True)
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -44,9 +49,7 @@ def upload_file():
 
     requirements = classify_requirements(text, genai)
 
-    output_path = "processed_requirements.pdf"
-    generate_pdf(requirements, output_path)
-
+    output_path = generate_pdf(requirements)  # Llama a la función generate_pdf() y captura la ruta del archivo generado
     return jsonify({"message": "File processed successfully", "output_path": output_path})
 
 def generate_text(prompt):

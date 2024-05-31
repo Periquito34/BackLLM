@@ -28,11 +28,21 @@ def classify_requirements(text, genai):
     for paragraph in paragraphs:
         prompt = f"Classify the following requirements by priority (low, medium, high):\n\n{paragraph}"
         response = model.generate_content(prompt)
-        print(response)
-        classified_text = response._result.candidates[0].content
-        print(classified_text._result.candidates[0].content)
-        # Evitar la repetición de la palabra "Prioridad:" en cada línea
-        clean_text = classified_text.replace("Prioridad: ", "")
-        requirements.append((paragraph, clean_text))
+        
+        # Revisamos si hay contenido en la respuesta
+        if response and response._result and response._result.candidates:
+            # Obtenemos el contenido del primer candidato
+            generated_content = response._result.candidates[0].content
+
+            # Si el contenido es una lista de cadenas
+            if isinstance(generated_content, list):
+                clean_text = ""
+                for item in generated_content:
+                    # Evitar la repetición de la palabra "Prioridad:" en cada línea
+                    clean_text += item.replace("Prioridad: ", "")
+            else:
+                clean_text = generated_content  # Si el contenido es una cadena simple
+
+            requirements.append((paragraph, clean_text))
 
     return requirements
