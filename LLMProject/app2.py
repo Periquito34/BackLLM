@@ -1,16 +1,19 @@
-from flask import Flask, request, jsonify, send_from_directory
+import fitz  # PyMuPDF
+import io
+import docx
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import google.generativeai as genai
-from lecturaArchivos import read_pdf, read_docx, classify_requirements
-from genPDF import generate_pdf
+from genDOCX import generate_docx
 import os
-from flask import send_file
 import glob
+from docx import Document
+from lecturaArchivos import read_pdf, read_docx, classify_requirements
 
 app = Flask(__name__)
 CORS(app)
 
-genai.configure(api_key="API_KEY")
+genai.configure(api_key="AIzaSyAFYKh6ILdSNyEa535Qd_treAzxyE7_2SE")
 model = genai.GenerativeModel('gemini-pro')
 
 @app.route('/')
@@ -27,18 +30,38 @@ def generate_questions():
     except Exception as e:
         error_message = f"Error during request: {e}"
         return jsonify({'error': error_message}), 500
+
+def classify_requirements2(text, genai):
+    prompt = f"Generate user stories from the following requirements:\n\n{text}"
+    response = genai.GenerativeModel('gemini-pro').generate_content(prompt)
+    if response and response._result and response._result.candidates:
+        generated_content = response._result.candidates[0].content.parts[0].text
+        return generated_content
+    return ""
+
+@app.route('/process-pdf', methods=['POST'])
+def process_pdf():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if not file.filename.endswith('.pdf'):
+        return jsonify({"error": "Unsupported file type"}), 400
+
+    text = read_pdf(file)
+    user_stories = classify_requirements2(text, genai)
+
+    output_path = "generated_files/processed_requirements.docx"
+    with open(output_path, 'w') as doc:
+        doc.write(user_stories)
     
+    return jsonify({"message": "PDF processed successfully", "output_path": output_path})
+
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    search_path = os.path.join('generated_files', 'processed_requirements_*.pdf')
-    files = glob.glob(search_path)
-
-    if not files:
-        return jsonify({"error": "No files found"}), 500
-    
-    latest_file = max(files, key=os.path.getctime)
-    
-    return send_file(latest_file, as_attachment=True)
+    return send_file(filename, as_attachment=True)
 
 
 @app.route('/upload', methods=['POST'])
@@ -58,7 +81,9 @@ def upload_file():
 
     requirements = classify_requirements(text, genai)
 
-    output_path = generate_pdf(requirements)  # Llama a la función generate_pdf() y captura la ruta del archivo generado
+    output_path = "generated_files/processed_requirements.docx"
+    generate_docx(requirements, output_path)
+
     return jsonify({"message": "File processed successfully", "output_path": output_path})
 
 
