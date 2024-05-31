@@ -5,6 +5,7 @@ from lecturaArchivos import read_pdf, read_docx, classify_requirements
 from genPDF import generate_pdf
 import os
 from flask import send_file
+import glob
 
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +30,15 @@ def generate_questions():
     
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    return send_from_directory(os.path.join('generated_files'), filename, as_attachment=True)
+    search_path = os.path.join('generated_files', 'processed_requirements_*.pdf')
+    files = glob.glob(search_path)
+
+    if not files:
+        return jsonify({"error": "No files found"}), 500
+    
+    latest_file = max(files, key=os.path.getctime)
+    
+    return send_file(latest_file, as_attachment=True)
 
 
 @app.route('/upload', methods=['POST'])
@@ -51,6 +60,7 @@ def upload_file():
 
     output_path = generate_pdf(requirements)  # Llama a la función generate_pdf() y captura la ruta del archivo generado
     return jsonify({"message": "File processed successfully", "output_path": output_path})
+
 
 def generate_text(prompt):
     response = model.generate_content(prompt)

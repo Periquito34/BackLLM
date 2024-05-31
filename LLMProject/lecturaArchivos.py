@@ -32,7 +32,7 @@ def classify_requirements(text, genai):
         # Revisamos si hay contenido en la respuesta
         if response and response._result and response._result.candidates:
             # Obtenemos el contenido del primer candidato
-            generated_content = response._result.candidates[0].content
+            generated_content = response._result.candidates[0].content.parts[0].text
 
             # Si el contenido es una lista de cadenas
             if isinstance(generated_content, list):
