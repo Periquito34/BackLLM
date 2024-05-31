@@ -9,7 +9,7 @@ from flask import send_file
 app = Flask(__name__)
 CORS(app)
 
-genai.configure(api_key="AIzaSyDrgS_nkCcezHkVGD2PeOAet-Ut9fPOuAc")
+genai.configure(api_key="API_KEY")
 model = genai.GenerativeModel('gemini-pro')
 
 @app.route('/')
