@@ -13,7 +13,7 @@ from lecturaArchivos import read_pdf, read_docx, classify_requirements
 app = Flask(__name__)
 CORS(app)
 
-genai.configure(api_key="AIzaSyAFYKh6ILdSNyEa535Qd_treAzxyE7_2SE")
+genai.configure(api_key="API-KEY")
 model = genai.GenerativeModel('gemini-pro')
 
 @app.route('/')
